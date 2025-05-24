@@ -1455,6 +1455,18 @@
         setInterval(updateCountdown, 1000);
         updateCountdown();
 
+        const firebaseConfig = {
+            apiKey: "API_KEY",
+            authDomain: "PROJECT_ID.firebaseapp.com",
+            databaseURL: "https://PROJECT_ID.firebaseio.com",
+            projectId: "PROJECT_ID",
+            storageBucket: "PROJECT_ID.appspot.com",
+            messagingSenderId: "SENDER_ID",
+            appId: "APP_ID"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+
         // Fungsi Komentar
         document.addEventListener('DOMContentLoaded', function() {
             // Initialize comments array from localStorage or create empty array
@@ -1465,40 +1477,40 @@
             // Form submission
             document.getElementById('commentForm').addEventListener('submit', function(e) {
                 e.preventDefault();
-                
                 const name = document.getElementById('name').value.trim();
                 const attendance = document.getElementById('attendance').value;
                 const commentText = document.getElementById('comment').value.trim();
-                
+            
                 if (name && commentText) {
                     const newComment = {
-                        id: Date.now(),
-                        name: name,
-                        attendance: attendance,
+                        name,
+                        attendance,
                         text: commentText,
-                        date: new Date().toLocaleString('id-ID', {
-                            day: 'numeric',
-                            month: 'long',
-                            year: 'numeric',
-                            hour: '2-digit',
-                            minute: '2-digit'
-                        })
+                        date: new Date().toLocaleString('id-ID')
                     };
-                    
-                    comments.unshift(newComment); // Add new comment to beginning of array
-                    localStorage.setItem('weddingComments', JSON.stringify(comments));
-                    
-                    updateCommentList(comments);
-                    updateStats(comments);
-                    
-                    // Reset form
+                    db.ref('comments').push(newComment); // simpan ke Firebase
                     this.reset();
-                    
-                    // Show success message
                     alert('Ucapan Anda telah terkirim. Terima kasih!');
                 }
             });
-            
+            db.ref('comments').on('value', (snapshot) => {
+                const comments = snapshot.val();
+                const commentList = document.getElementById('commentList');
+                commentList.innerHTML = '';
+                for (let id in comments) {
+                    const c = comments[id];
+                    commentList.innerHTML += `
+                        <div class="comment-item">
+                            <div class="comment-header">
+                                <span class="comment-name">${c.name}</span>
+                                <span class="comment-attendance ${c.attendance}">${c.attendance === 'hadir' ? 'Hadir' : 'Tidak Hadir'}</span>
+                            </div>
+                            <p class="comment-text">${c.text}</p>
+                            <div class="comment-date">${c.date}</div>
+                        </div>`;
+                }
+            });
+
             // Sticker picker functionality
             const stickerBtn = document.getElementById('stickerBtn');
             const stickerPicker = document.getElementById('stickerPicker');
