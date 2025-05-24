@@ -1467,49 +1467,83 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
 
-        // Fungsi Komentar
-        document.addEventListener('DOMContentLoaded', function() {
-            // Initialize comments array from localStorage or create empty array
-            let comments = JSON.parse(localStorage.getItem('weddingComments')) || [];
-            updateCommentList(comments);
-            updateStats(comments);
+      const SHEET_WEBAPP_URL = "https://script.google.com/macros/s/AKfycbzia6yfOsEKPiu_Tn89Fo1riBF7IN6nIGu85RBuv9ofiYQG4g_VpBqWoEtcupoOECeMcw/exec";
 
-            // Form submission
-            document.getElementById('commentForm').addEventListener('submit', function(e) {
-                e.preventDefault();
-                const name = document.getElementById('name').value.trim();
-                const attendance = document.getElementById('attendance').value;
-                const commentText = document.getElementById('comment').value.trim();
-            
-                if (name && commentText) {
-                    const newComment = {
-                        name,
-                        attendance,
-                        text: commentText,
-                        date: new Date().toLocaleString('id-ID')
-                    };
-                    db.ref('comments').push(newComment); // simpan ke Firebase
-                    this.reset();
-                    alert('Ucapan Anda telah terkirim. Terima kasih!');
-                }
-            });
-            db.ref('comments').on('value', (snapshot) => {
-                const comments = snapshot.val();
-                const commentList = document.getElementById('commentList');
-                commentList.innerHTML = '';
-                for (let id in comments) {
-                    const c = comments[id];
-                    commentList.innerHTML += `
-                        <div class="comment-item">
-                            <div class="comment-header">
-                                <span class="comment-name">${c.name}</span>
-                                <span class="comment-attendance ${c.attendance}">${c.attendance === 'hadir' ? 'Hadir' : 'Tidak Hadir'}</span>
-                            </div>
-                            <p class="comment-text">${c.text}</p>
-                            <div class="comment-date">${c.date}</div>
-                        </div>`;
-                }
-            });
+      // Kirim komentar ke Google Sheets
+      document.getElementById('commentForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+
+        const name = document.getElementById('name').value.trim();
+        const attendance = document.getElementById('attendance').value;
+        const commentText = document.getElementById('comment').value.trim();
+
+        if (name && commentText) {
+          const commentData = {
+            name: name,
+            attendance: attendance,
+            comment: commentText
+          };
+
+          fetch(SHEET_WEBAPP_URL, {
+            method: 'POST',
+            body: JSON.stringify(commentData)
+          })
+          .then(response => response.text())
+          .then(data => {
+            alert("Ucapan berhasil dikirim!");
+            document.getElementById('commentForm').reset();
+            loadComments();
+          })
+          .catch(error => {
+            console.error("Gagal mengirim komentar:", error);
+            alert("Terjadi kesalahan saat mengirim komentar.");
+          });
+        }
+      });
+
+      // Ambil komentar dari Google Sheets
+      function loadComments() {
+        fetch(SHEET_WEBAPP_URL)
+        .then(response => response.json())
+        .then(data => {
+          const commentList = document.getElementById('commentList');
+          commentList.innerHTML = '';
+
+          if (data.length === 0) {
+            commentList.innerHTML = '<p style="text-align: center; color: #666;">Belum ada ucapan. Jadilah yang pertama mengirimkan ucapan!</p>';
+            return;
+          }
+
+          data.reverse().forEach(comment => {
+            const attendanceClass = comment.attendance === 'hadir' ? 'hadir' : 'tidak';
+            const attendanceText = comment.attendance === 'hadir' ? 'Hadir' : 'Tidak Hadir';
+
+            const commentItem = document.createElement('div');
+            commentItem.className = 'comment-item';
+            commentItem.innerHTML = `
+              <div class="comment-header">
+                <span class="comment-name">${comment.name}</span>
+                <span class="comment-attendance ${attendanceClass}">${attendanceText}</span>
+              </div>
+              <p class="comment-text">${comment.comment}</p>
+              <div class="comment-date">${comment.timestamp}</div>
+            `;
+
+            commentList.appendChild(commentItem);
+          });
+
+          // Update statistik
+          const attendingCount = data.filter(c => c.attendance === 'hadir').length;
+          const notAttendingCount = data.filter(c => c.attendance === 'tidak').length;
+
+          document.getElementById('attendingCount').textContent = attendingCount;
+          document.getElementById('notAttendingCount').textContent = notAttendingCount;
+          document.getElementById('totalComments').textContent = data.length;
+        });
+      }
+
+      // Muat komentar saat halaman siap
+      document.addEventListener('DOMContentLoaded', loadComments);
 
             // Sticker picker functionality
             const stickerBtn = document.getElementById('stickerBtn');
@@ -1539,14 +1573,6 @@
             stickerPicker.addEventListener('click', function(e) {
                 if (e.target === this) {
                     this.style.display = 'none';
-                }
-            });
-            
-            // Delete comment functionality
-            document.addEventListener('click', function(e) {
-                if (e.target.classList.contains('delete-comment')) {
-                    const idToDelete = parseInt(e.target.getAttribute('data-id'));
-                    deleteComment(idToDelete);
                 }
             });
         });
