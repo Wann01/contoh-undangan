@@ -1270,32 +1270,6 @@
                     <button class="delete-comment">Hapus</button>
                 </div>
             </div>
-
-            <!-- Sticker Picker Modal -->
-            <div class="sticker-picker" id="stickerPicker">
-                <div class="sticker-container">
-                    <span class="close-sticker" id="closeSticker">&times;</span>
-                    <h3>Pilih Stiker</h3>
-                    <div class="sticker-grid">
-                        <div class="sticker-item" data-sticker="❤️">❤️</div>
-                        <div class="sticker-item" data-sticker="😊">😊</div>
-                        <div class="sticker-item" data-sticker="🎉">🎉</div>
-                        <div class="sticker-item" data-sticker="💐">💐</div>
-                        <div class="sticker-item" data-sticker="🥂">🥂</div>
-                        <div class="sticker-item" data-sticker="✨">✨</div>
-                        <div class="sticker-item" data-sticker="🎊">🎊</div>
-                        <div class="sticker-item" data-sticker="💖">💖</div>
-                        <div class="sticker-item" data-sticker="👰">👰</div>
-                        <div class="sticker-item" data-sticker="🤵">🤵</div>
-                        <div class="sticker-item" data-sticker="💑">💑</div>
-                        <div class="sticker-item" data-sticker="🎁">🎁</div>
-                        <div class="sticker-item" data-sticker="🥳">🥳</div>
-                        <div class="sticker-item" data-sticker="🙏">🙏</div>
-                        <div class="sticker-item" data-sticker="😍">😍</div>
-                        <div class="sticker-item" data-sticker="💕">💕</div>
-                    </div>
-                </div>
-            </div>
         </section>
 
         <!-- Section 5: Digital Gifts -->
@@ -1528,78 +1502,6 @@
         }
         
         document.addEventListener('DOMContentLoaded', loadComments);
-
-
-            // Sticker picker functionality
-            const stickerBtn = document.getElementById('stickerBtn');
-            const stickerPicker = document.getElementById('stickerPicker');
-            const closeSticker = document.getElementById('closeSticker');
-            const stickerItems = document.querySelectorAll('.sticker-item');
-            const commentField = document.getElementById('comment');
-            
-            stickerBtn.addEventListener('click', function() {
-                stickerPicker.style.display = 'flex';
-            });
-            
-            closeSticker.addEventListener('click', function() {
-                stickerPicker.style.display = 'none';
-            });
-            
-            stickerItems.forEach(item => {
-                item.addEventListener('click', function() {
-                    const sticker = this.getAttribute('data-sticker');
-                    commentField.value += sticker;
-                    stickerPicker.style.display = 'none';
-                    commentField.focus();
-                });
-            });
-            
-            // Close sticker picker when clicking outside
-            stickerPicker.addEventListener('click', function(e) {
-                if (e.target === this) {
-                    this.style.display = 'none';
-                }
-            });
-        });
-        
-        function updateCommentList(comments) {
-            const commentList = document.getElementById('commentList');
-
-            if (comments.length === 0) {
-                commentList.innerHTML = '<p style="text-align: center; color: #666;">Belum ada ucapan. Jadilah yang pertama mengirimkan ucapan!</p>';
-                return;
-            }
-
-            commentList.innerHTML = '';
-
-            comments.forEach(comment => {
-                const commentItem = document.createElement('div');
-                commentItem.className = 'comment-item';
-
-                const attendanceClass = comment.attendance === 'hadir' ? 'hadir' : 'tidak';
-                const attendanceText = comment.attendance === 'hadir' ? 'Hadir' : 'Tidak Hadir';
-
-                commentItem.innerHTML = `
-                    <div class="comment-header">
-                        <span class="comment-name">${comment.name}</span>
-                        <span class="comment-attendance ${attendanceClass}">${attendanceText}</span>
-                    </div>
-                    <p class="comment-text">${comment.text}</p>
-                    <div class="comment-date">${comment.date}</div>
-                    <button class="delete-comment" data-id="${comment.id}">Hapus</button>
-                `;
-
-                commentList.appendChild(commentItem);
-            });
-        }
-        
-        function deleteComment(id) {
-            let comments = JSON.parse(localStorage.getItem('weddingComments')) || [];
-            comments = comments.filter(comment => comment.id !== id);
-            localStorage.setItem('weddingComments', JSON.stringify(comments));
-            updateCommentList(comments);
-            updateStats(comments);
-        }
         
         function updateStats(comments) {
             const attendingCount = comments.filter(c => c.attendance === 'hadir').length;
