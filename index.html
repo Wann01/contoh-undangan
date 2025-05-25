@@ -1270,6 +1270,32 @@
                     <button class="delete-comment">Hapus</button>
                 </div>
             </div>
+
+            <!-- Sticker Picker Modal -->
+            <div class="sticker-picker" id="stickerPicker">
+                <div class="sticker-container">
+                    <span class="close-sticker" id="closeSticker">&times;</span>
+                    <h3>Pilih Stiker</h3>
+                    <div class="sticker-grid">
+                        <div class="sticker-item" data-sticker="❤️">❤️</div>
+                        <div class="sticker-item" data-sticker="😊">😊</div>
+                        <div class="sticker-item" data-sticker="🎉">🎉</div>
+                        <div class="sticker-item" data-sticker="💐">💐</div>
+                        <div class="sticker-item" data-sticker="🥂">🥂</div>
+                        <div class="sticker-item" data-sticker="✨">✨</div>
+                        <div class="sticker-item" data-sticker="🎊">🎊</div>
+                        <div class="sticker-item" data-sticker="💖">💖</div>
+                        <div class="sticker-item" data-sticker="👰">👰</div>
+                        <div class="sticker-item" data-sticker="🤵">🤵</div>
+                        <div class="sticker-item" data-sticker="💑">💑</div>
+                        <div class="sticker-item" data-sticker="🎁">🎁</div>
+                        <div class="sticker-item" data-sticker="🥳">🥳</div>
+                        <div class="sticker-item" data-sticker="🙏">🙏</div>
+                        <div class="sticker-item" data-sticker="😍">😍</div>
+                        <div class="sticker-item" data-sticker="💕">💕</div>
+                    </div>
+                </div>
+            </div>
         </section>
 
         <!-- Section 5: Digital Gifts -->
@@ -1429,80 +1455,136 @@
         setInterval(updateCountdown, 1000);
         updateCountdown();
 
-        const firebaseConfig = {
-            apiKey: "API_KEY",
-            authDomain: "PROJECT_ID.firebaseapp.com",
-            databaseURL: "https://PROJECT_ID.firebaseio.com",
-            projectId: "PROJECT_ID",
-            storageBucket: "PROJECT_ID.appspot.com",
-            messagingSenderId: "SENDER_ID",
-            appId: "APP_ID"
-        };
-        firebase.initializeApp(firebaseConfig);
-        const db = firebase.database();
-        // Ganti URL ini dengan URL Web App dari Apps Script kamu
-        const SHEET_WEBAPP_URL = "https://script.google.com/macros/s/AKfycbzia6yfOsEKPiu_Tn89Fo1riBF7IN6nIGu85RBuv9ofiYQG4g_VpBqWoEtcupoOECeMcw/exec";
-        
-        // Kirim komentar ke Google Sheet
-        document.getElementById('commentForm').addEventListener('submit', function(e) {
-            e.preventDefault();
+        // Konfigurasi Google Sheets API
+        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyMzxL3NTnOzChj9tvAmbfODgJQjBC_gM6nhOyxr4OLpz6JVWU5a5-keEy6SqG9ygM6iw/exec';
+
+        // Fungsi Komentar
+        document.addEventListener('DOMContentLoaded', function() {
+            // Load komentar dari Google Sheets
+            loadComments();
             
-            const name = document.getElementById('name').value.trim();
-            const attendance = document.getElementById('attendance').value;
-            const commentText = document.getElementById('comment').value.trim();
-        
-            if (name && commentText) {
-                const commentData = {
-                    name: name,
-                    attendance: attendance,
-                    comment: commentText
-                };
-        
-                fetch(SHEET_WEBAPP_URL, {
-                    method: 'POST',
-                    body: JSON.stringify(commentData)
-                })
-                .then(response => response.text())
-                .then(data => {
-                    alert("Ucapan berhasil dikirim!");
-                    loadComments(); // Refresh comments
-                    document.getElementById('commentForm').reset();
-                })
-                .catch(error => {
-                    alert("Terjadi kesalahan saat mengirim komentar.");
-                    console.error(error);
-                });
+            // Form submission
+            document.getElementById('commentForm').addEventListener('submit', async function(e) {
+                e.preventDefault();
+                
+                const name = document.getElementById('name').value.trim();
+                const attendance = document.getElementById('attendance').value;
+                const commentText = document.getElementById('comment').value.trim();
+                
+                if (name && commentText) {
+                    try {
+                        const formData = new FormData();
+                        formData.append('name', name);
+                        formData.append('attendance', attendance);
+                        formData.append('comment', commentText);
+                        
+                        const response = await fetch(SCRIPT_URL, {
+                            method: 'POST',
+                            body: formData
+                        });
+                        
+                        const result = await response.json();
+                        
+                        if (result.status === "success") {
+                            // Reset form
+                            this.reset();
+                            
+                            // Reload komentar
+                            loadComments();
+                            
+                            // Show success message
+                            alert('Ucapan Anda telah terkirim. Terima kasih!');
+                        } else {
+                            throw new Error(result.message || 'Gagal menyimpan data');
+                        }
+                    } catch (error) {
+                        console.error('Error:', error);
+                        alert('Terjadi kesalahan saat mengirim ucapan: ' + error.message);
+                    }
+                }
+            });
+            
+            // Fungsi untuk memuat komentar dari Google Sheets
+            async function loadComments() {
+                try {
+                    const response = await fetch(`${SCRIPT_URL}?t=${Date.now()}`);
+                    const result = await response.json();
+                    
+                    if (result.status === "success") {
+                        updateCommentList(result.comments);
+                        updateStats(result.comments);
+                    } else {
+                        throw new Error(result.message || 'Gagal memuat komentar');
+                    }
+                } catch (error) {
+                    console.error('Error loading comments:', error);
+                    alert('Gagal memuat komentar: ' + error.message);
+                }
             }
-        });
-        
-        // Menampilkan komentar dari Google Sheet
-        function loadComments() {
-            fetch(SHEET_WEBAPP_URL)
-            .then(response => response.json())
-            .then(data => {
-                const commentList = document.getElementById('commentList');
-                commentList.innerHTML = '';
-                data.reverse().forEach(comment => {
-                    const attendanceClass = comment.attendance === 'hadir' ? 'hadir' : 'tidak';
-                    const attendanceText = comment.attendance === 'hadir' ? 'Hadir' : 'Tidak Hadir';
-        
-                    const commentItem = document.createElement('div');
-                    commentItem.className = 'comment-item';
-                    commentItem.innerHTML = `
-                        <div class="comment-header">
-                            <span class="comment-name">${comment.name}</span>
-                            <span class="comment-attendance ${attendanceClass}">${attendanceText}</span>
-                        </div>
-                        <p class="comment-text">${comment.comment}</p>
-                        <div class="comment-date">${comment.timestamp}</div>
-                    `;
-                    commentList.appendChild(commentItem);
+            
+            // Sticker picker functionality (tetap sama seperti sebelumnya)
+            const stickerBtn = document.getElementById('stickerBtn');
+            const stickerPicker = document.getElementById('stickerPicker');
+            const closeSticker = document.getElementById('closeSticker');
+            const stickerItems = document.querySelectorAll('.sticker-item');
+            const commentField = document.getElementById('comment');
+            
+            stickerBtn.addEventListener('click', function() {
+                stickerPicker.style.display = 'flex';
+            });
+            
+            closeSticker.addEventListener('click', function() {
+                stickerPicker.style.display = 'none';
+            });
+            
+            stickerItems.forEach(item => {
+                item.addEventListener('click', function() {
+                    const sticker = this.getAttribute('data-sticker');
+                    commentField.value += sticker;
+                    stickerPicker.style.display = 'none';
+                    commentField.focus();
                 });
             });
+            
+            stickerPicker.addEventListener('click', function(e) {
+                if (e.target === this) {
+                    this.style.display = 'none';
+                }
+            });
+        });
+
+        // Fungsi untuk memperbarui daftar komentar
+        function updateCommentList(comments) {
+            const commentList = document.getElementById('commentList');
+
+            if (comments.length === 0) {
+                commentList.innerHTML = '<p style="text-align: center; color: #666;">Belum ada ucapan. Jadilah yang pertama mengirimkan ucapan!</p>';
+                return;
+            }
+
+            commentList.innerHTML = '';
+
+            comments.forEach(comment => {
+                const commentItem = document.createElement('div');
+                commentItem.className = 'comment-item';
+
+                const attendanceClass = comment.attendance === 'hadir' ? 'hadir' : 'tidak';
+                const attendanceText = comment.attendance === 'hadir' ? 'Hadir' : 'Tidak Hadir';
+
+                commentItem.innerHTML = `
+                    <div class="comment-header">
+                        <span class="comment-name">${comment.name}</span>
+                        <span class="comment-attendance ${attendanceClass}">${attendanceText}</span>
+                    </div>
+                    <p class="comment-text">${comment.text}</p>
+                    <div class="comment-date">${comment.date}</div>
+                `;
+
+                commentList.appendChild(commentItem);
+            });
         }
-        
-        document.addEventListener('DOMContentLoaded', loadComments);
-        
+
+        // Fungsi untuk memperbarui statistik
         function updateStats(comments) {
             const attendingCount = comments.filter(c => c.attendance === 'hadir').length;
             const notAttendingCount = comments.filter(c => c.attendance === 'tidak').length;
@@ -1511,7 +1593,6 @@
             document.getElementById('notAttendingCount').textContent = notAttendingCount;
             document.getElementById('totalComments').textContent = comments.length;
         }
-
         // Copy button functionality for gift section
         document.addEventListener('DOMContentLoaded', function() {
             const copyButtons = document.querySelectorAll('.copy-btn');
